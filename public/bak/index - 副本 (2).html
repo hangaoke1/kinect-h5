@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>kinect毕业设计</title>
+</head>
+<style>
+  body{
+    background: #000;
+  }
+</style>
+<body>
+	<canvas id="canvas"></canvas>
+</body>
+<script src="https://cdn.bootcss.com/socket.io/2.0.4/socket.io.js"></script>
+<script src="https://cdn.bootcss.com/dat-gui/0.7.1/dat.gui.min.js"></script>
+<script src="https://cdn.bootcss.com/lodash.js/4.17.5/lodash.min.js"></script>
+<script>
+  (function() {
+  var ExpandingDot, 
+    animationLoop, 
+    canvas, 
+    context, 
+    delayedPlace, 
+    dots, 
+    gui, 
+    height, 
+    i, 
+    scene, 
+    width, 
+    _i, 
+    _ref;
+
+  canvas = document.getElementById("canvas");
+
+  context = canvas.getContext("2d");
+
+  width = window.innerWidth;
+
+  height = window.innerHeight;
+
+  canvas.width = width;
+
+  canvas.height = height;
+
+  scene = {
+    finalRadius: 100,
+    duration: 1500,
+    innerColor: "#fff",
+    outerColor: "#fff"
+  };
+
+  Math.easeOutQuart = function(t, b, c, d) {
+    t /= d;
+    t--;
+    return -c * (t * t * t * t - 1) + b;
+  };
+
+  class Dot {
+    constructor (x, y, ctx) {
+      this.finalRadius = scene.finalRadius
+      this.startTime = Date.now()
+      this.radius = 0
+      this.innerRadius = 0
+      this.completed = false
+      this.position = {
+        x,
+        y
+      }
+    }
+
+  }
+
+  ExpandingDot = (function() {
+    // ExpandingDot.prototype.completed = false;
+
+    function ExpandingDot(x, y) {
+      this.finalRadius = scene.finalRadius;
+      this.startTime = Date.now();
+      this.radius = 0;
+      this.innerRadius = 0;
+      this.completed = false;
+      this.position = {
+        x: x,
+        y: y
+      };
+    }
+
+    ExpandingDot.prototype.update = function() {
+      var currentTime;
+      if (!this.completed) {
+        currentTime = Date.now() - this.startTime;
+        this.radius = Math.easeOutQuart(currentTime, 0, this.finalRadius * 0.9, scene.duration);
+        if (currentTime > 100) {
+          this.innerRadius = Math.easeOutQuart(currentTime - 100, 0, this.finalRadius * 1.1, scene.duration * 2);
+        }
+        this.radius = Math.max(this.radius, 0);
+        this.innerRadius = Math.max(this.innerRadius, 0);
+        if (this.innerRadius > this.radius * 1) {
+          this.completed = true;
+        }
+        return context.lineWidth = Math.easeOutQuart(currentTime, 30, -30, scene.duration);
+      }
+    };
+
+    ExpandingDot.prototype.render = function() {
+      context.globalCompositeOperation = "source-over";
+      context.fillStyle = scene.innerColor;
+      context.beginPath();
+      context.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2, false);
+      context.fill();
+      context.strokeStyle = scene.outerColor;
+      context.stroke();
+      context.globalCompositeOperation = "destination-out";
+      context.fillStyle = "red";
+      context.beginPath();
+      context.arc(this.position.x, this.position.y, this.innerRadius, 0, Math.PI * 2, false);
+      return context.fill();
+    };
+
+    return ExpandingDot;
+
+  })();
+
+  dots = [];
+
+
+
+  (animationLoop = function() {
+    var aliveDots, dot, _i, _j, _len, _len1;
+    context.clearRect(0, 0, width, height);
+    aliveDots = [];
+    for (_i = 0, _len = dots.length; _i < _len; _i++) {
+      dot = dots[_i];
+      if (!dot.completed) {
+        aliveDots.push(dot);
+      }
+    }
+    dots = aliveDots;
+    for (_j = 0, _len1 = dots.length; _j < _len1; _j++) {
+      dot = dots[_j];
+      if (!dot.completed) {
+        dot.update();
+        dot.render();
+      }
+    }
+    return requestAnimationFrame(animationLoop);
+  })();
+
+
+
+
+
+  window.addEventListener("click", function(event) {
+    return dots.push(new ExpandingDot(event.pageX, event.pageY));
+  });
+
+  window.addEventListener("mousemove", _.throttle(function(event) {
+    return dots.push(new ExpandingDot(event.pageX, event.pageY));
+  }, 150));
+
+  var socket = io.connect('/');
+  socket.on('bodyFrame', _.throttle(function(bodyFrame) {
+    var index = 0;
+    // 遍历所有骨骼数据
+    bodyFrame.bodies.forEach(function(body) {
+      if (body.tracked) {
+        for (var jointType in body.joints) {
+          var joint = body.joints[jointType];
+          if (jointType == 7 || jointType == 11) {
+            dots.push(new ExpandingDot(joint.depthX * window.innerWidth, joint.depthY * window.innerHeight));
+          }
+        }
+        index++;
+      }
+    });
+  }, 150));
+
+  gui = new dat.GUI();
+
+  gui.add(scene, 'finalRadius', 10, 300);
+
+  gui.addColor(scene, 'innerColor');
+
+  gui.addColor(scene, 'outerColor');
+
+}).call(this);
+</script>
+
+</html>

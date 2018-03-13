@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>kinect毕业设计</title>
+</head>
+<style>
+body {
+  background: #000;
+  overflow: hidden;
+}
+</style>
+
+<body>
+  <canvas id="canvas"></canvas>
+</body>
+<script src="https://cdn.bootcss.com/socket.io/2.0.4/socket.io.js"></script>
+<script src="https://cdn.bootcss.com/dat-gui/0.7.1/dat.gui.min.js"></script>
+<script src="https://cdn.bootcss.com/lodash.js/4.17.5/lodash.min.js"></script>
+<script>
+(function() {
+  var
+    animationLoop,
+    canvas,
+    context,
+    dots,
+    gui,
+    width,
+    height,
+    people,
+    scene;
+
+  canvas = document.getElementById("canvas");
+
+  context = canvas.getContext("2d");
+
+  width = window.innerWidth;
+
+  height = window.innerHeight;
+
+  canvas.width = width;
+
+  canvas.height = height;
+
+  people = {
+    move: false
+  }
+
+  var kpeople = {}
+
+  scene = {
+    finalRadius: 50,
+    duration: 1500,
+    innerColor: "#000",
+    outerColor: "#fff"
+  };
+
+  dots = [];
+
+  /*
+   * t: current time（当前时间）；
+   * b: beginning value（初始值）；
+   * c: change in value（变化量）；
+   * d: duration（持续时间）。
+   */
+  Math.linear = function(t, b, c, d) {
+    return c * t / d + b
+  }
+  
+  Math.easeOutQuart = function(t, b, c, d) {
+    t /= d;
+    t--;
+    return -c * (t * t * t * t - 1) + b;
+  };
+
+  // 扩散圆圈
+  class ExpandingDot {
+    constructor(option) {
+      this.finalRadius = option.finalRadius || scene.finalRadius
+      this.duration = option.duration || scene.duration
+      this.outerColor = scene.outerColor
+      this.innerColor = scene.innerColor
+      this.context = option.context || context
+      this.startTime = Date.now()
+      this.radius = 0
+      this.innerRadius = 0
+      this.completed = false
+      this.position = {
+        x: option.x,
+        y: option.y
+      }
+    }
+    update() {
+      var currentTime;
+      if (!this.completed) {
+        currentTime = Date.now() - this.startTime;
+        this.radius = Math.easeOutQuart(currentTime, 0, this.finalRadius * 0.9, this.duration);
+        if (currentTime > 100) {
+          this.innerRadius = Math.easeOutQuart(currentTime - 100, 0, this.finalRadius * 1.1, this.duration * 2);
+        }
+        this.radius = Math.max(this.radius, 0);
+        this.innerRadius = Math.max(this.innerRadius, 0);
+        if (this.innerRadius > this.radius) {
+          this.completed = true;
+        }
+        return this.context.lineWidth = Math.easeOutQuart(currentTime, 30, -30, this.duration);
+      }
+    }
+    render() {
+      this.context.globalCompositeOperation = "source-over";
+      this.context.fillStyle = this.outerColor;
+      this.context.beginPath();
+      this.context.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2, false);
+      this.context.fill();
+      this.context.strokeStyle = this.outerColor;
+      this.context.stroke();
+      // this.context.globalCompositeOperation = "destination-out";
+      this.context.fillStyle = this.innerColor;
+      this.context.beginPath();
+      this.context.arc(this.position.x, this.position.y, this.innerRadius, 0, Math.PI * 2, false);
+      this.context.fill();
+    }
+  }
+
+  // 路径圆圈
+  class WalkingDot {
+    constructor(option) {
+      this.radius = _.random(10, 20)
+      this.vy = _.random(1) > 0.5 ? _.random(0.1, 0.2) : _.random(-0.2, -0.1)
+      this.completed = false
+      this.opactiy = 1
+      this.duration = 2000
+      this.color = '#fff'
+      this.startTime = Date.now()
+      this.context = option.context || context
+      this.position = {
+        x: option.x,
+        y: option.y
+      }
+    }
+    update() {
+      // 已经执行时间
+      var currentTime;
+      if (!this.completed) {
+        currentTime = Date.now() - this.startTime;
+        this.opactiy = Math.linear(currentTime, 1, -1, this.duration);
+        this.position.y -= this.vy
+        if (this.opactiy <= 0) {
+          this.completed = true;
+        }
+      }
+    }
+    render() {
+      this.context.globalCompositeOperation = "source-over";
+      this.context.fillStyle = `rgba(255,255,255,${this.opactiy})`;
+      this.context.beginPath();
+      this.context.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2, false);
+      this.context.fill();
+    }
+  }
+
+  (animationLoop = function() {
+    var aliveDots, dot, _i, _j, _len, _len1;
+    context.clearRect(0, 0, width, height);
+    aliveDots = [];
+    for (_i = 0, _len = dots.length; _i < _len; _i++) {
+      dot = dots[_i];
+      if (!dot.completed) {
+        aliveDots.push(dot);
+      }
+    }
+    dots = aliveDots;
+    for (_j = 0, _len1 = dots.length; _j < _len1; _j++) {
+      dot = dots[_j];
+      if (!dot.completed) {
+        dot.update();
+        dot.render();
+      }
+    }
+    return requestAnimationFrame(animationLoop);
+  })();
+
+  // setInterval(() => {
+  //   dots.push(new ExpandingDot({x:people.x, y:people.y, duration: 2000, finalRadius: 100}));
+  // }, 1500)
+
+  setInterval(() => {
+    for (var key in kpeople) {
+      var item = kpeople[key]
+      if (item && item.left && item.right) {
+        (item.leftHandState === 2) && dots.push(new ExpandingDot({ x: item.left.x, y: item.left.y, duration: 2000, finalRadius: 100 }));
+        (item.rightHandState === 2) && dots.push(new ExpandingDot({ x: item.right.x, y: item.right.y, duration: 2000, finalRadius: 100 }));
+      }
+    }
+  }, 1500)
+
+  // var gg;
+
+  // window.addEventListener("click", function(event) {
+  //   return dots.push(new ExpandingDot({x:event.pageX, y:event.pageY, duration: 3000}));
+  // });
+
+  // window.addEventListener("mousemove", _.throttle(function(event) {
+  //   clearTimeout(gg);
+  //   people.x = event.pageX
+  //   people.y = event.pageY
+  //   people.move = true
+  //   gg = setTimeout(()=> {
+  //     people.move = false
+  //   }, 1000)
+  //   return dots.push(new WalkingDot({x:event.pageX, y:event.pageY}));
+  // }, 150));
+
+  var socket = io.connect('/');
+  socket.on('bodyFrame', _.throttle(function(bodyFrame) {
+    // 遍历所有骨骼数据
+    bodyFrame.bodies.forEach(function(body, index) {
+      if (body.tracked) {
+        kpeople[index] = {}
+        for (var jointType in body.joints) {
+          var joint = body.joints[jointType];
+          var putDot = true;
+          if (jointType == 7 || jointType == 11) {
+            var hand_x = joint.depthX * window.innerWidth
+            var hand_y = joint.depthY * window.innerHeight
+            if (jointType == 7) {
+              // 记录左手位置
+              kpeople[index].left = {
+                x: hand_x,
+                y: hand_y
+              }
+            } else {
+              // 记录右手位置
+              kpeople[index].right = {
+                x: hand_x,
+                y: hand_y
+              }
+            }
+            dots.push(new WalkingDot({ x: hand_x, y: hand_y }));
+          }
+        }
+        kpeople[index].leftHandState = body.leftHandState
+        kpeople[index].rightHandState = body.rightHandState
+      }
+    });
+  }, 180));
+
+  gui = new dat.GUI();
+
+  gui.add(scene, 'finalRadius', 10, 300);
+
+  gui.add(scene, 'duration', 1000, 3000);
+
+  gui.addColor(scene, 'innerColor');
+
+  gui.addColor(scene, 'outerColor');
+
+}).call(this);
+</script>
+
+</html>
