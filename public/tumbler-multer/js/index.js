@@ -659,12 +659,9 @@
   window.addEventListener('DOMContentLoaded', function() {
     var muteButton;
     new Loader();
-    document.querySelector('#rate').addEventListener('change', function(evt) {
-      return Config.SIMULATION_RATE = parseFloat(evt.target.value);
-    });
-    document.body.addEventListener('click', function(evt) {
-      console.log(window.world_)
-    })
+    // document.querySelector('#rate').addEventListener('change', function(evt) {
+    //   return Config.SIMULATION_RATE = parseFloat(evt.target.value);
+    // });
     // 增加kinect 根据人数定义速度
     var socket = io.connect('/');
     socket.on('bodyFrame', _.throttle(function(bodyFrame) {
@@ -681,15 +678,15 @@
         Config.SIMULATION_RATE = bodyCount / 2
       }
     }, 180));
-    muteButton = document.querySelector('#mute');
-    if (SoundManager.isSupported) {
-      return muteButton.addEventListener('change', function(evt) {
-        return SoundManager.mute(evt.target.checked);
-      });
-    } else {
-      muteButton.checked = muteButton.disabled = true;
-      return document.querySelector('#mute + label').title = "Audio requires the Web Audio API which your browser does not support.";
-    }
+    // muteButton = document.querySelector('#mute');
+    // if (SoundManager.isSupported) {
+    //   return muteButton.addEventListener('change', function(evt) {
+    //     return SoundManager.mute(evt.target.checked);
+    //   });
+    // } else {
+    //   muteButton.checked = muteButton.disabled = true;
+    //   return document.querySelector('#mute + label').title = "Audio requires the Web Audio API which your browser does not support.";
+    // }
   });
 
 }).call(this);
