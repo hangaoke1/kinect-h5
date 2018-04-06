@@ -515,7 +515,7 @@
     randomColor: function() {
       var allColors;
       // allColors = ["#3498DB", "#2980B9", "#1abc9c", "#16a085", "#2ECC71", "#27AE60", "#9B59B6", "#8E44AD", "#8E44AD", "#2C3E50", "#F1C40F", "#F39C12", "#E67E22", "#D35400", "#E74C3C", "#C0392B", "#ECF0F1", "#BDC3C7", "#95A5A6", "#7F8C8D"];
-      allColors = ["#000000", "#FF0000", "#3498DB", "#1abc9c"]
+      allColors = ["#f0dfb9", "#e8b997", "#3f4e63", "#679fab", "#7badbf", "#b0c6d1"];
       return allColors[Math.floor(Math.random() * allColors.length)];
     }
   };
