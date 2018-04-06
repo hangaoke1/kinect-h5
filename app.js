@@ -13,6 +13,9 @@ if(kinect.open()) {
        // res.sendFile(__dirname + '/public/tumbler-multer/index.html');
        res.sendFile(__dirname + '/public/tumbler-single/index.html');
     });
+    app.get('/multer', function(req, res) {
+       res.sendFile(__dirname + '/public/tumbler-multer/index.html');
+    });
 	//listen for body frames
 	kinect.on('bodyFrame', function(bodyFrame){
 		io.sockets.emit('bodyFrame', bodyFrame);
