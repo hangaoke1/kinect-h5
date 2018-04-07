@@ -209,15 +209,15 @@
 (function() {
   window.Config = {
     "SCALE": 40,
-    "NUM_EACH_SHAPE": 20,
+    "NUM_EACH_SHAPE": 30,
     "WORLD_WIDTH": 10,
     "WORLD_HALF_WIDTH": 5,
     "DRUM_ANGULAR_VELOCITY": Math.PI / 3,
     "NUM_DRUM_SECTIONS": 32,
     "MIN_BALL_RADIUS": 0.1,
-    "MAX_BALL_RADIUS": 0.4,
+    "MAX_BALL_RADIUS": 0.3,
     "MIN_BOX_DIMENSION": 0.1,
-    "MAX_BOX_DIMENSION": 0.4,
+    "MAX_BOX_DIMENSION": 0.3,
     "MIN_STEP_SIZE": 1 / 2400,
     "MAX_STEP_SIZE": 1 / 100,
     "MIN_AUDIO_PLAYBACK_RATE": 0.15,
