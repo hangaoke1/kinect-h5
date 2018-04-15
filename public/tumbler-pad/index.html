@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>时空ipad</title>
+</head>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body,
+html {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  font-family: "Source Sans Pro", sans-serif;
+  overflow: hidden;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity .5s
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active 在低于版本 2.1.8 中 */ {
+  opacity: 0
+}
+
+#loading-canvas {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  pointer-event: none;
+}
+.transfer-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 100px;
+  height: 50px;
+  line-height: 50px;
+  background: #000;
+  color: #fff;
+  border: none;
+  outline: none;
+  z-index: 9999;
+  cursor: pointer;
+  border-radius: 5px;
+}
+circle{
+  outline: none;
+}
+rect{
+  outline: none;
+}
+</style>
+
+<body>
+  <div id="root">
+    <button class="transfer-btn" @click="sendShape">Transfer</button>
+    <svg xmlns="http://www.w3.org/2000/svg" height="100" width="100" viewBox="0 0 100 100" id="loading-canvas">
+      <g ref="group">
+        <animateTransform 
+          v-if="gAnimation"
+          begin="0s"
+          attributeName="transform"
+          :type="gAnimation.type"
+          :from="gAnimation.from"
+          :to="gAnimation.to"
+          :dur="gAnimation.dur"
+          repeatCount="indefinite"
+          />
+        <template v-if="selectItem">
+          <transition name="fade" appear>
+            <circle v-if="selectItem.type === 'circle'" :r="10" :cx="50" :cy="50" :style="{fill: selectItem.fill}" ref="selectItem"></circle>
+            <rect v-else="selectItem.type === 'rect'" :width="selectItem.showPad.width" :height="selectItem.showPad.height" :x="selectItem.showPad.x" :y="selectItem.showPad.y" :style="{fill: selectItem.fill}" ref="selectItem">
+              <animateTransform 
+                attributeName="transform"
+                begin="0s"
+                :type="selectItem.animation.type"
+                :from="selectItem.showPad.animation.from"
+                :to="selectItem.showPad.animation.to"
+                :dur="selectItem.animation.dur"
+                repeatCount="indefinite"
+                />
+            </rect>
+          </transition>
+        </template>
+        <template v-for="item in shapeList">
+          <circle v-if="item.type === 'circle'" :r="item.r" :cx="item.cx" :cy="item.cy" :style="{fill: item.fill}" @click="addShape(item)"></circle>
+          <rect v-if="item.type === 'rect'" :width="item.width" :height="item.height" :x="item.x" :y="item.y" :style="{fill: item.fill}" @click="addShape(item)">
+            <animateTransform 
+              attributeName="transform"
+              begin="0s"
+              :type="item.animation.type"
+              :from="item.animation.from"
+              :to="item.animation.to"
+              :dur="item.animation.dur"
+              repeatCount="indefinite"
+              />
+          </rect>
+        </template>
+      </g>
+    </svg>
+  </div>
+</body>
+<script src="https://cdn.bootcss.com/vue/2.5.16/vue.min.js"></script>
+<script src="https://cdn.bootcss.com/velocity/2.0.2/velocity.min.js"></script>
+<script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+<script>
+(function() {
+  window.Utilities = {
+    range: function(min, max, scale) {
+      return (scale * (max - min)) + min;
+    },
+    rand: function(min, max) {
+      return (Math.random() * (max - min)) + min;
+    },
+    randomColor: function() {
+      var allColors;
+      allColors = ["#f0dfb9", "#e8b997", "#3f4e63", "#679fab", "#7badbf", "#b0c6d1"];
+      return allColors[Math.floor(Math.random() * allColors.length)];
+    }
+  };
+
+}).call(this);
+
+var gvm = new Vue({
+  el: "#root",
+  data () {
+    return {
+      selectItem: null,
+      gAnimation: null,
+      shapeList: []
+    }
+  },
+  mounted () {
+    this.initializeShapes()
+  },
+  methods: {
+    addShape (item) {
+      if (item.type === 'rect') {
+        var width = 10
+        var height = 10
+        var x = 50 - 5
+        var y = 50 - 5
+        item.showPad = {
+          width,
+          height,
+          x,
+          y,
+          animation: {
+            from: '0 50 50',
+            to: '360 50 50',
+          }
+        }
+      } else {
+        item.showPad = {
+          r: 10,
+          cx: 50,
+          cy: 50
+        }
+      }
+      this.selectItem = item;
+    },
+    sendShape () {
+      var vm = this
+      if (vm.selectItem) {
+        var itemDom = vm.$refs.selectItem
+        function step1 () {
+          if (vm.selectItem.type === 'rect') {
+            Velocity(itemDom, {
+              opacity: [ 0, "easeInSine", 1 ],
+              x: -50
+            }, {
+              duration: 600,
+              complete: vm.clearItem
+            })
+          } else {
+            Velocity(itemDom, {
+              opacity: [ 0, "easeInSine", 1 ],
+              r: 0
+            }, {
+              duration: 600,
+              complete: vm.clearItem
+            })
+          }
+        }
+        axios.post('/addShape', {
+          type: vm.selectItem.type,
+          fill: vm.selectItem.fill
+        }).then(responese => {
+          var res = responese.data;
+          if (~~res.code === 0) {
+            step1()
+            console.log('发射成功')
+          } else {
+            console.log('发射失败')
+          }
+        }).catch(err => {
+          console.log(err)
+        })
+      }
+    },
+    clearItem () {
+      this.selectItem = null
+    },
+    initializeShapes () {
+      var angleStep, animation, currentAngle, d, numSections, shape, x, y;
+      numSections = 24;
+      currentAngle = angleStep = (Math.PI * 2) / numSections;
+      while (currentAngle < (Math.PI * 2)) {
+        d = 45;
+        x = 50 + (d * Math.cos(currentAngle));
+        y = 50 + (d * Math.sin(currentAngle));
+        shape = this.generateRandomShape(x, y);
+        currentAngle += angleStep;
+      }
+      this.gAnimation = {
+        attributeName: 'transform',
+        type: 'rotate',
+        from: '0 50 50',
+        to: '360 50 50',
+        dur: '300s',
+        repeatCount: 'indefinite'
+      }
+    },
+    generateRandomShape (x, y) {
+      var item = {};
+      var animation, from, h, r, shape, to, type, w;
+      type = Math.round(Math.random()) ? "circle" : "rect";
+      item.type = type;
+      if (type === "circle") {
+        r = Utilities.rand(2, 3);
+        item.r = r
+        item.cx = x + (-r / 2)
+        item.cy = y + (-r / 2)
+      } else if (type === "rect") {
+        w = Utilities.rand(2, 3);
+        h = Utilities.rand(2, 4);
+        item.width = w
+        item.height = h
+        item.x = x + (-w / 2)
+        item.y = y + (-h / 2)
+        from = Math.round(Math.random()) ? 360 : 0;
+        to = 360 - from;
+        item.animation = {
+          attributeName: 'transform',
+          type: 'rotate',
+          from: "" + from + " " + x + " " + y,
+          to: "" + to + " " + x + " " + y,
+          dur: "" + (Utilities.rand(15, 30)) + "s",
+          repeatCount: 'indefinite'
+        }
+      }
+      item.fill = Utilities.randomColor();
+      this.shapeList.push(item)
+    }
+  }
+})
+</script>
+
+</html>

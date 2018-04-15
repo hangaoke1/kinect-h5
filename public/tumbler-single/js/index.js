@@ -6,6 +6,7 @@
   Shape = (function() {
     function Shape(options) {
       var bodyDef, fixtureDef, r, t, u;
+      this.customerfill = options.fill
       this.initializeDimensions_();
       fixtureDef = new Box2D.Dynamics.b2FixtureDef();
       fixtureDef.density = 1.0;
@@ -19,9 +20,10 @@
       r = 3 * (u > 1 ? 2 - u : u);
       bodyDef.position.x = Config.WORLD_HALF_WIDTH + r * Math.cos(t);
       bodyDef.position.y = Config.WORLD_HALF_WIDTH + r * Math.sin(t);
-      if(window.handX && window.handY) {
-        bodyDef.position.x = window.handX * Config.WORLD_HALF_WIDTH * 2;
-        bodyDef.position.y = window.handY * Config.WORLD_HALF_WIDTH * 2;
+      // 通过pad生成
+      if(options.fill) {
+        bodyDef.position.x = Config.WORLD_HALF_WIDTH;
+        bodyDef.position.y = Config.WORLD_HALF_WIDTH;
       }
       this.body_ = options.world.CreateBody(bodyDef);
       this.body_.CreateFixture(fixtureDef);
@@ -44,7 +46,7 @@
     };
 
     Shape.prototype.initializeColor_ = function() {
-      return this.color_ = Utilities.randomColor();
+      return this.color_ = this.customerfill || Utilities.randomColor();
     };
 
     Shape.prototype.initializeDimensions_ = function() {
@@ -203,39 +205,6 @@
   })(Shape);
 
   window.Box = Box;
-
-}).call(this);
-
-(function() {
-  window.Config = {
-    "SCALE": 40,
-    "NUM_EACH_SHAPE": 30,
-    "WORLD_WIDTH": 10,
-    "WORLD_HALF_WIDTH": 5,
-    "DRUM_ANGULAR_VELOCITY": Math.PI / 3,
-    "NUM_DRUM_SECTIONS": 32,
-    "MIN_BALL_RADIUS": 0.1,
-    "MAX_BALL_RADIUS": 0.3,
-    "MIN_BOX_DIMENSION": 0.1,
-    "MAX_BOX_DIMENSION": 0.3,
-    "MIN_STEP_SIZE": 1 / 2400,
-    "MAX_STEP_SIZE": 1 / 100,
-    "MIN_AUDIO_PLAYBACK_RATE": 0.15,
-    "MAX_AUDIO_PLAYBACK_RATE": 0.75,
-    "SIMULATION_RATE": 1
-  };
-
-  Config.MIN_CIRCLE_AREA = Math.min(Config.MIN_BALL_RADIUS * Config.MIN_BALL_RADIUS * Math.PI);
-
-  Config.MAX_CIRCLE_AREA = Math.max(Config.MAX_BALL_RADIUS * Config.MAX_BALL_RADIUS * Math.PI);
-
-  Config.MIN_BOX_AREA = Math.min(Config.MIN_BOX_DIMENSION * Config.MIN_BOX_DIMENSION);
-
-  Config.MAX_BOX_AREA = Math.max(Config.MAX_BOX_DIMENSION * Config.MAX_BOX_DIMENSION);
-
-  Config.MIN_SHAPE_AREA = Math.min(Config.MIN_CIRCLE_AREA, Config.MIN_BOX_AREA);
-
-  Config.MAX_SHAPE_AREA = Math.max(Config.MAX_CIRCLE_AREA, Config.MAX_BOX_AREA);
 
 }).call(this);
 
@@ -514,8 +483,7 @@
     },
     randomColor: function() {
       var allColors;
-      // allColors = ["#3498DB", "#2980B9", "#1abc9c", "#16a085", "#2ECC71", "#27AE60", "#9B59B6", "#8E44AD", "#8E44AD", "#2C3E50", "#F1C40F", "#F39C12", "#E67E22", "#D35400", "#E74C3C", "#C0392B", "#ECF0F1", "#BDC3C7", "#95A5A6", "#7F8C8D"];
-      allColors = ["#f0dfb9", "#e8b997", "#3f4e63", "#679fab", "#7badbf", "#b0c6d1"];
+      allColors = Config.COLOR || ["#f0dfb9", "#e8b997", "#3f4e63", "#679fab", "#7badbf", "#b0c6d1"];
       return allColors[Math.floor(Math.random() * allColors.length)];
     }
   };
@@ -537,23 +505,25 @@
       this.requestFrame_();
     }
 
-    WashingMachine.prototype.makeShape = function() {
+    WashingMachine.prototype.makeShape = function(shapeConfig) {
       if (window.making) {
         return;
       } else {
         window.making = true;
       }
-      if (Math.random() > 0.5) {
+      if (shapeConfig.type === 'circle') {
         this.shapes_.push(new Ball({
           world: this.world_,
           svg: this.svg_,
-          type: Box2D.Dynamics.b2Body.b2_kinematicBody
+          type: Box2D.Dynamics.b2Body.b2_kinematicBody,
+          fill: shapeConfig.fill
         }));
       } else {
         this.shapes_.push(new Box({
           world: this.world_,
           svg: this.svg_,
-          type: Box2D.Dynamics.b2Body.b2_kinematicBody
+          type: Box2D.Dynamics.b2Body.b2_kinematicBody,
+          fill: shapeConfig.fill
         }));
       }
     }
@@ -577,6 +547,7 @@
       drumBodyDef.position.y = Config.WORLD_HALF_WIDTH;
       drumBody = this.world_.CreateBody(drumBodyDef);
       drumBody.SetAngularVelocity(Config.DRUM_ANGULAR_VELOCITY);
+      this.drumBody = drumBody;
       fixtureDef = new Box2D.Dynamics.b2FixtureDef();
       fixtureDef.density = 1.0;
       fixtureDef.friction = 1.0;
@@ -732,31 +703,38 @@
 
   window.addEventListener('DOMContentLoaded', function() {
     var muteButton;
-    var handMark = document.querySelector('.hand-position');
     var mouseX;
     var mouseY;
+    var V_RATE = 0.2;
+    var MAX_RATE = Config.MAX_RATE;
+    var MIN_RATE = Config.MIN_RATE;
+    var DEAFULT_RATE = Config.DEAFULT_RATE;
+    var timer = null;
+    var rate = Config.SIMULATION_RATE
     new Loader();
-    // document.querySelector('#rate').addEventListener('change', function(evt) {
-    //   return Config.SIMULATION_RATE = parseFloat(evt.target.value);
-    // });
-    document.body.addEventListener('click', function(evy) {
-      if (window.washingMachine) {
-        washingMachine.makeShape()
-      }
-    })
-    // document.addEventListener('mousemove', function (e) {
-    //   mouseX = e.pageX; 
-    //   mouseY = e.pageY;
-    //   window.handX = mouseX / window.innerWidth;
-    //   window.handY = mouseY / window.innerHeight;
-    //   handMark.style.left = (mouseX - 50) + 'px';
-    //   handMark.style.top = mouseY + 'px';
-    // }, false);
+    document.querySelector('#rate').addEventListener('change', function(evt) {
+      return Config.SIMULATION_RATE = parseFloat(evt.target.value);
+    });
     // 增加kinect 根据人数定义速度
     var socket = io.connect('/');
+    socket.on('addShape', function(shapeConfig) {
+      if (window.washingMachine) {
+        var shapes = window.washingMachine.shapes_
+        if (shapes.length >= window.Config.MAX_NUM) {
+          window.washingMachine.svg_.removeChild(shapes[0].svgShape_)
+          window.washingMachine.world_.DestroyBody(shapes[0].body_)
+          window.washingMachine.shapes_.shift()
+        }
+        window.washingMachine.makeShape(shapeConfig)
+      }
+    })
     socket.on('bodyFrame', _.throttle(function(bodyFrame) {
       // 遍历所有骨骼数据
       var body = null;
+      var headPosition = {
+        x: 0,
+        y: 0
+      }
       var leftPosition = {
         x: 0,
         y: 0
@@ -765,55 +743,76 @@
         x: 0,
         y: 0
       };
-      for (var i = bodyFrame.bodies.length - 1; i >= 0; i--) {
+      var handleState = 1; // 手势 0:不能识别 1:未检测到 2:手掌 3:握拳 4:剪刀手
+      var length = bodyFrame.bodies.length
+      for (var i = 0; i < length; i++) {
         var a = bodyFrame.bodies[i];
         if (a.tracked) {
           body = a;
           break;
         }
       }
-      //捕捉到存在的人体
+      //捕捉到存在的人体 onlyOne
       if (body) {
+        clearTimeout(timer)
         for (var jointType in body.joints) {
           var joint = body.joints[jointType];
-          if (jointType == 7 || jointType == 11) {
-            var hand_x = joint.depthX * 100;
-            var hand_y = joint.depthY * 100;
+          if (jointType == 7 || jointType == 11 || jointType == 3) {
+            // 100 * 100 画布
+            var pos_x = joint.depthX * 100;
+            var pos_y = joint.depthY * 100;
             if (jointType == 7) {
               // 记录左手位置
               leftPosition = {
-                x: hand_x,
-                y: hand_y
+                x: pos_x,
+                y: pos_y
               }
-            } else {
+            } else if (jointType == 11) {
               // 记录右手位置
               rightPosition = {
-                x: hand_x,
-                y: hand_y
+                x: pos_x,
+                y: pos_y
+              }
+            } else {
+              // 记录头部位置
+              headPosition = {
+                x: pos_x,
+                y: pos_y
               }
             }
           }
         }
-        var distance = Math.abs(leftPosition.x - rightPosition.x);
-        var scale = distance / 20;
-        if (scale > 1.3) {
-          Config.SIMULATION_RATE = 1.3;
+        var leftDistance = Math.abs(leftPosition.x - headPosition.x);
+        var rightDistance = Math.abs(rightPosition.x - headPosition.x);
+        if (leftDistance > rightDistance) {
+          handleState = body.leftHandState
+          if (window.washingMachine) {
+            window.washingMachine.drumBody.SetAngularVelocity(Config.DRUM_ANGULAR_VELOCITY)
+          }
         } else {
-          Config.SIMULATION_RATE = scale;
+          handleState = body.rightHandState
+          if (window.washingMachine) {
+            window.washingMachine.drumBody.SetAngularVelocity(-Config.DRUM_ANGULAR_VELOCITY)
+          }
         }
+        if (handleState == 2) {
+          rate += V_RATE
+          if (rate > MAX_RATE) {
+            rate = MAX_RATE
+          }
+        } else {
+          rate -= V_RATE
+          if (rate < MIN_RATE) {
+            rate = MIN_RATE
+          }
+        }
+        Config.SIMULATION_RATE = rate
       } else {
-        Config.SIMULATION_RATE = 0.2;
+        timer = setTimeout(() => {
+          Config.SIMULATION_RATE = DEAFULT_RATE
+        }, 1000)
       }
-    }, 180));
-    // muteButton = document.querySelector('#mute');
-    // if (SoundManager.isSupported) {
-    //   return muteButton.addEventListener('change', function(evt) {
-    //     return SoundManager.mute(evt.target.checked);
-    //   });
-    // } else {
-    //   muteButton.checked = muteButton.disabled = true;
-    //   return document.querySelector('#mute + label').title = "Audio requires the Web Audio API which your browser does not support.";
-    // }
+    }, 50));
   });
 
 }).call(this);
