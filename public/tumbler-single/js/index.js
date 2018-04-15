@@ -220,6 +220,9 @@
       this.canvas_ = document.querySelector("#loading-canvas");
       closeLink = document.querySelector(".loading-splash a");
       closeLink.addEventListener("click", this.closeLoader_);
+      setTimeout(() => {
+        closeLink.click()
+      }, 5000)
       this.initializeShapes_();
       this.initalizeSounds_();
     }

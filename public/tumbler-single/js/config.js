@@ -3,7 +3,7 @@
     "MAX_NUM": 30, // 个数上限
     "DEAFULT_RATE": 0.5, // 无人状态下转盘速度0 - 1
     "MAX_RATE": 1.3, // 转盘速度上限
-    "MIN_RATE": 0.2, // 转盘速度下限
+    "MIN_RATE": 0.1, // 转盘速度下限
     "NUM_EACH_SHAPE": 10, // 每种形状的个数 相当于初始状态下 20个图形
     "COLOR": ["#f0dfb9", "#e8b997", "#3f4e63", "#679fab", "#7badbf", "#b0c6d1"], //颜色参数
     "DRUM_ANGULAR_VELOCITY": Math.PI / 3, // 转盘速度
@@ -12,10 +12,10 @@
     "WORLD_WIDTH": 10,
     "WORLD_HALF_WIDTH": 5,
     "NUM_DRUM_SECTIONS": 32,
-    "MIN_BALL_RADIUS": 0.2,
-    "MAX_BALL_RADIUS": 0.35,
-    "MIN_BOX_DIMENSION": 0.2,
-    "MAX_BOX_DIMENSION": 0.35,
+    "MIN_BALL_RADIUS": 0.1,
+    "MAX_BALL_RADIUS": 0.3,
+    "MIN_BOX_DIMENSION": 0.1,
+    "MAX_BOX_DIMENSION": 0.3,
     "MIN_STEP_SIZE": 1 / 2400,
     "MAX_STEP_SIZE": 1 / 100,
     "SCALE": 40,
